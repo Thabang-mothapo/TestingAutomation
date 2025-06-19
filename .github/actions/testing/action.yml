@@ -1,0 +1,46 @@
+name: 'Deploy SQL Scripts'
+description: 'Installs SQLCMD and deploys SQL scripts to a specified SQL Server'
+ 
+inputs:
+  environment:
+    description: 'Target environment (e.g., Dev or Prod)'
+    required: true
+  sql_server_host:
+    description: 'SQL Server host'
+    required: true
+  sql_user:
+    description: 'SQL Server username'
+    required: true
+  sql_password:
+    description: 'SQL Server password'
+    required: true
+  db_script:
+    description: 'Path to the database creation script'
+    required: false
+    default: 'create_db_and_table.sql'
+  proc_script:
+    description: 'Path to the stored procedure script'
+    required: false
+    default: 'create_stored_procedure.sql'
+ 
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - name: Install SQLCMD
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y curl gnupg software-properties-common
+        curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+        curl -fsSL https://packages.microsoft.com/config/ubuntu/20.04/prod.list | sudo tee /etc/apt/sources.list.d/msprod.list
+        sudo apt-get update
+        sudo ACCEPT_EULA=Y apt-get install -y mssql-tools unixodbc-dev
+        echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bashrc
+    - name: Run SQL Scripts
+      shell: bash
+      run: |
+        export PATH="$PATH:/opt/mssql-tools/bin"
+        sqlcmd -S "${{ inputs.sql_server_host }}" -U "${{ inputs.sql_user }}" -P "${{ inputs.sql_password }}" -i "${{ inputs.db_script }}" -C
+        sqlcmd -S "${{ inputs.sql_server_host }}" -U "${{ inputs.sql_user }}" -P "${{ inputs.sql_password }}" -i "${{ inputs.proc_script }}" -C
