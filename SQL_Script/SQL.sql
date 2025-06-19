@@ -1,4 +1,4 @@
-Create database TimesheetDB
+Create database Timesheet
 GO
 
 CREATE TABLE Consultant (
