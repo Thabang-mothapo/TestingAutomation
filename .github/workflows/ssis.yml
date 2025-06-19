@@ -1,33 +1,46 @@
-# .github/workflows/run-ssis-job.yml
-
-name: Run SSIS & Deploy SQL Jobs
+name: TimesheetDB SSIS Deployment
 
 on:
-  workflow_call:
-
-env:
-  SQL_SERVER: ${{ secrets.SQL_SERVER_URL }}
-  DB_USER: ${{ secrets.DB_USERNAME }}
-  DB_PASS: ${{ secrets.DB_PASSWORD }}
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  ssis-job:
-    runs-on: windows-latest
-
+  validate-and-deploy:
+    runs-on: windows-latest # SSIS requires Windows runner
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      # Checkout repository to access SQL scripts and SSIS packages
+      - name: Checkout Repository
+        uses: actions/checkout@v4 # Latest version as of June 2025
 
-      - name: Install SQL Server tools
+      # Install SQL Server command-line tools (sqlcmd)
+      - name: Install sqlcmd
         run: |
-          choco install sqlcmd -y
+          choco install sqlserver-cmdlineutils -y
+        env:
+          ChocolateyInstall: C:\ProgramData\chocolatey
 
-      - name: Run SSIS Package
+      # Validate SQL scripts (Create_TimesheetDB.sql, Create_Tables.sql)
+      - name: Validate SQL Scripts
         run: |
-          echo "Simulate SSIS package execution or use DTExec"
-          REM Example if SSIS is on remote:
-          REM dtexec /F "C:\path\to\package.dtsx" /SET \Package.Variables[User::MyVar].Value;"value"
+          sqlcmd -S ${{ secrets.SQL_SERVER }} -U ${{ secrets.SQL_USERNAME }} -P ${{ secrets.SQL_PASSWORD }} -i sql/Create_TimesheetDB.sql
+          sqlcmd -S ${{ secrets.SQL_SERVER }} -U ${{ secrets.SQL_USERNAME }} -P ${{ secrets.SQL_PASSWORD }} -i sql/Create_Tables.sql
+        env:
+         SQL_SERVER: ${{ secrets.SQL_SERVER }}
+         SQL_USERNAME: ${{ secrets.SQL_USERNAME }}
+         SQL_PASSWORD: ${{ secrets.SQL_PASSWORD }}
 
-      - name: Deploy SQL Jobs
+      # Deploy SSIS packages (example using dtexec; adjust for ispac deployment)
+      - name: Deploy SSIS Packages
         run: |
-          sqlcmd -S "%SQL_SERVER%" -U "%DB_USER%" -P "%DB_PASS%" -d TimesheetDB -i ./sql/create_jobs.sql
+          # Example: Copy ispac to server or deploy using SSISDB tools
+          # Requires SSIS tools installed on runner
+          # Placeholder: Deploy MainWorkflow.dtsx and DataWorkflow.dtsx
+          echo "Deploying SSIS packages (configure actual deployment here)"
+        # Note: Actual deployment may require Visual Studio or SSISDB APIs
+
+      # Deploy SQL Agent Job
+      - name: Deploy SQL Agent Job
+        run: |
+          sqlcmd -S ${{ secrets.SQL_SERVER }} -U ${{ secrets.SQL_USERNAME }} -P ${{ secrets.SQL_PASSWORD }} -i sql/Create_SQLAgent_Job.sql
