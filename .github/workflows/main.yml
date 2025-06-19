@@ -4,7 +4,7 @@ name: Main Timesheet Setup
 
 on:
   workflow_dispatch:
-
+  
 env:
   SQL_SERVER: ${{ secrets.SQL_SERVER_URL }}
   DB_USER: ${{ secrets.DB_USERNAME }}
