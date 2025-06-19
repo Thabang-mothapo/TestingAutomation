@@ -11,7 +11,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3  # Ensure repository is checked out first
       - name: Deploy SQL to Dev
-        uses: ./.github/workflows/ssis.yml  # Reference the custom action
+        uses: ./.github/actions/testing  # Reference the custom action
         with:
           environment: Dev
           sql_server_host: ${{ secrets.DEV_SQL_SERVER_HOST }}
