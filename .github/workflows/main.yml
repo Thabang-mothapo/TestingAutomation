@@ -5,7 +5,7 @@ on:
  
 jobs:
   deploy-dev:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     environment: Dev  # Development environment
     steps:
       - name: Checkout repository
