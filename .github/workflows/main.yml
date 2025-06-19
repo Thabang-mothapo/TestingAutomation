@@ -1,0 +1,36 @@
+# .github/workflows/main.yml
+
+name: Main Timesheet Setup
+
+on:
+  workflow_dispatch:
+
+env:
+  SQL_SERVER: ${{ secrets.SQL_SERVER_URL }}
+  DB_USER: ${{ secrets.DB_USERNAME }}
+  DB_PASS: ${{ secrets.DB_PASSWORD }}
+
+jobs:
+  setup-db:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install SQL Server tools
+        run: |
+          sudo apt-get update
+          sudo ACCEPT_EULA=Y apt-get install -y mssql-tools unixodbc-dev
+          echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bashrc
+          source ~/.bashrc
+
+      - name: Create TimesheetDB and tables
+        run: |
+          sqlcmd -S "$SQL_SERVER" -U "$DB_USER" -P "$DB_PASS" -Q "CREATE DATABASE TimesheetDB"
+          sqlcmd -S "$SQL_SERVER" -U "$DB_USER" -P "$DB_PASS" -d TimesheetDB -i ./sql/timesheet_schema.sql
+
+  call-ssis:
+    needs: setup-db
+    uses: ./.github/workflows/run-ssis-job.yml
+    secrets: inherit
