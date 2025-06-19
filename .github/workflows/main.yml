@@ -28,9 +28,9 @@ jobs:
       - name: Create TimesheetDB and tables
         run: |
           sqlcmd -S "$SQL_SERVER" -U "$DB_USER" -P "$DB_PASS" -Q "CREATE DATABASE TimesheetDB"
-          sqlcmd -S "$SQL_SERVER" -U "$DB_USER" -P "$DB_PASS" -d TimesheetDB -i ./sql/timesheet_schema.sql
+          sqlcmd -S "$SQL_SERVER" -U "$DB_USER" -P "$DB_PASS" -d TimesheetDB -i SQL_Script/SQL.sql
 
   call-ssis:
     needs: setup-db
-    uses: ./.github/workflows/run-ssis-job.yml
+    uses: ./.github/workflows/ssis.yml
     secrets: inherit
