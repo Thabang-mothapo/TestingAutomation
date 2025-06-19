@@ -1,0 +1,33 @@
+# .github/workflows/run-ssis-job.yml
+
+name: Run SSIS & Deploy SQL Jobs
+
+on:
+  workflow_call:
+
+env:
+  SQL_SERVER: ${{ secrets.SQL_SERVER_URL }}
+  DB_USER: ${{ secrets.DB_USERNAME }}
+  DB_PASS: ${{ secrets.DB_PASSWORD }}
+
+jobs:
+  ssis-job:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install SQL Server tools
+        run: |
+          choco install sqlcmd -y
+
+      - name: Run SSIS Package
+        run: |
+          echo "Simulate SSIS package execution or use DTExec"
+          REM Example if SSIS is on remote:
+          REM dtexec /F "C:\path\to\package.dtsx" /SET \Package.Variables[User::MyVar].Value;"value"
+
+      - name: Deploy SQL Jobs
+        run: |
+          sqlcmd -S "%SQL_SERVER%" -U "%DB_USER%" -P "%DB_PASS%" -d TimesheetDB -i ./sql/create_jobs.sql
