@@ -32,7 +32,7 @@ jobs:
 
 
       # Deploy SSIS packages (example using dtexec; adjust for ispac deployment)
-      - name: Deploy SSIS Packages
+       - name: Deploy SSIS Packages
         run: |
           # Example: Copy ispac to server or deploy using SSISDB tools
           # Requires SSIS tools installed on runner
