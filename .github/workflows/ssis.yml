@@ -1,4 +1,4 @@
-name: TimesheetDB SSIS Deployment
+name: Timesheet SSIS Deployment
 
 on:
   push:
@@ -23,13 +23,13 @@ jobs:
 
       # Validate SQL scripts (Create_TimesheetDB.sql, Create_Tables.sql)
       - name: Validate SQL Scripts
-        run: |
-          sqlcmd -S ${{ secrets.SQL_SERVER }} -U ${{ secrets.SQL_USERNAME }} -P ${{ secrets.SQL_PASSWORD }} -i sql/Create_TimesheetDB.sql
-          sqlcmd -S ${{ secrets.SQL_SERVER }} -U ${{ secrets.SQL_USERNAME }} -P ${{ secrets.SQL_PASSWORD }} -i sql/Create_Tables.sql
-        env:
-         SQL_SERVER: ${{ secrets.SQL_SERVER }}
-         SQL_USERNAME: ${{ secrets.SQL_USERNAME }}
-         SQL_PASSWORD: ${{ secrets.SQL_PASSWORD }}
+  run: |
+    sqlcmd -S $env:SQL_SERVER -U $env:SQL_USERNAME -P $env:SQL_PASSWORD -i SQL_Script/SQL.sql
+  env:
+    SQL_SERVER: ${{ secrets.SQL_SERVER }}
+    SQL_USERNAME: ${{ secrets.SQL_USERNAME }}
+    SQL_PASSWORD: ${{ secrets.SQL_PASSWORD }}
+
 
       # Deploy SSIS packages (example using dtexec; adjust for ispac deployment)
       - name: Deploy SSIS Packages
