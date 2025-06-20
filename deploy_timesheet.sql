@@ -8,7 +8,7 @@ IF OBJECT_ID('DeployTimesheetDatabase', 'P') IS NOT NULL
 GO
 
 -- Create the DeployTimesheetDatabase stored procedure
-CREATE PROCEDURE DeployTimesheetDatabase
+CREATE PROCEDURE DeployTimesheetDBDatabase
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -17,7 +17,7 @@ BEGIN
         -- Create Timesheet database if it doesn't exist
         IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'Timesheet')
         BEGIN
-            CREATE DATABASE Timesheet;
+            CREATE DATABASE TimesheetDB;
         END
 
         -- Use dynamic SQL to create tables in Timesheet database
@@ -68,5 +68,5 @@ END;
 GO
 
 -- Execute the procedure
-EXEC DeployTimesheetDatabase;
+EXEC DeployTimesheetDBDatabase;
 GO
