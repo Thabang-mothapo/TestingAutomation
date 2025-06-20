@@ -1,120 +1,58 @@
-CREATE OR ALTER PROCEDURE DeployTimesheetDatabase
+-- Ensure the script runs in the master database initially
+USE master;
+GO
+
+-- Create the DeployTimesheetDatabase stored procedure
+CREATE PROCEDURE DeployTimesheetDatabase
 AS
 BEGIN
     SET NOCOUNT ON;
-    
+
     BEGIN TRY
-        -- Create Database if it doesn't exist
+        -- Create Timesheet database if it doesn't exist
         IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'Timesheet')
         BEGIN
-            EXEC('CREATE DATABASE Timesheet');
+            CREATE DATABASE Timesheet;
         END
 
-        -- Use the Timesheet database
-        USE Timesheet;
-        
-        -- Create Consultant table
-        IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Consultant]') AND type in (N'U'))
-        BEGIN
-            CREATE TABLE Consultant (
-                ConsultantID INT PRIMARY KEY IDENTITY(1,1),
-                ConsultantName NVARCHAR(100) NOT NULL
-            );
-        END
+        -- Switch to Timesheet database (handled dynamically here)
+        -- Use dynamic SQL to avoid USE statement inside procedure
+        DECLARE @SQL NVARCHAR(MAX);
+        SET @SQL = N'USE Timesheet; ' +
+                  N'IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = ''Consultant'') ' +
+                  N'CREATE TABLE Consultant (ConsultantId INT PRIMARY KEY, Name NVARCHAR(100), Email NVARCHAR(100)); ' +
+                  N'IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = ''Client'') ' +
+                  N'CREATE TABLE Client (ClientId INT PRIMARY KEY, Name NVARCHAR(100), Contact NVARCHAR(100)); ' +
+                  N'IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = ''Timesheet'') ' +
+                  N'CREATE TABLE Timesheet (TimesheetId INT PRIMARY KEY, ConsultantId INT, ClientId INT, DateWorked DATE, HoursWorked DECIMAL(5,2), FOREIGN KEY (ConsultantId) REFERENCES Consultant(ConsultantId), FOREIGN KEY (ClientId) REFERENCES Client(ClientId)); ' +
+                  N'IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = ''Leave'') ' +
+                  N'CREATE TABLE Leave (LeaveId INT PRIMARY KEY, ConsultantId INT, StartDate DATE, EndDate DATE, Reason NVARCHAR(200), FOREIGN KEY (ConsultantId) REFERENCES Consultant(ConsultantId)); ' +
+                  N'IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = ''AuditLog'') ' +
+                  N'CREATE TABLE AuditLog (AuditLogId INT PRIMARY KEY IDENTITY, EventType NVARCHAR(100), EventDateTime DATETIME, Details NVARCHAR(500)); ' +
+                  N'IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = ''ErrorLog'') ' +
+                  N'CREATE TABLE ErrorLog (ErrorLogId INT PRIMARY KEY IDENTITY, ErrorMessage NVARCHAR(500), ErrorDateTime DATETIME, StackTrace NVARCHAR(MAX));';
 
-        -- Create Client table
-        IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Client]') AND type in (N'U'))
-        BEGIN
-            CREATE TABLE Client (
-                ClientID INT PRIMARY KEY IDENTITY(1,1),
-                ClientName NVARCHAR(100) NOT NULL
-            );
-        END
+        EXEC sp_executesql @SQL;
 
-        -- Create Timesheet table
-        IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Timesheet]') AND type in (N'U'))
-        BEGIN
-            CREATE TABLE Timesheet (
-                TimesheetID INT PRIMARY KEY IDENTITY(1,1),
-                ConsultantID INT NOT NULL,
-                EntryDate DATE NOT NULL,
-                DayOfWeek NVARCHAR(20),
-                ClientID INT,
-                Description NVARCHAR(500),
-                BillingStatus NVARCHAR(20),
-                Comments NVARCHAR(1000),
-                TotalHours DECIMAL(10,4),
-                StartTime DECIMAL(10,4),
-                EndTime DECIMAL(10,4),
-                FOREIGN KEY (ConsultantID) REFERENCES Consultant(ConsultantID),
-                FOREIGN KEY (ClientID) REFERENCES Client(ClientID)
-            );
-        END
-
-        -- Create Leave table
-        IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Leave]') AND type in (N'U'))
-        BEGIN
-            CREATE TABLE Leave (
-                LeaveID INT PRIMARY KEY IDENTITY(1,1),
-                ConsultantID INT NOT NULL,
-                LeaveType NVARCHAR(50),
-                StartDate DATE,
-                EndDate DATE,
-                NumberOfDays INT,
-                ApprovalObtained NVARCHAR(10),
-                SickNote NVARCHAR(10),
-                FOREIGN KEY (ConsultantID) REFERENCES Consultant(ConsultantID)
-            );
-        END
-
-        -- Create AuditLog table
-        IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[AuditLog]') AND type in (N'U'))
-        BEGIN
-            CREATE TABLE AuditLog (
-                AuditLogID INT PRIMARY KEY IDENTITY(1,1),
-                TableName NVARCHAR(100) NOT NULL,
-                Action NVARCHAR(10) NOT NULL,
-                RecordID INT NOT NULL,
-                ChangedBy NVARCHAR(100) NOT NULL
-            );
-        END
-
-        -- Create ErrorLog table
-        -- Note: Your ErrorLog table references ConsultantID but it's missing in the schema. Assuming this is an error, I'll remove the FK constraint.
-        IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ErrorLog]') AND type in (N'U'))
-        BEGIN
-            CREATE TABLE ErrorLog (
-                ErrorLogID INT PRIMARY KEY IDENTITY(1,1),
-                ErrorDate DATETIME DEFAULT GETDATE(),
-                ErrorMessage NVARCHAR(MAX) NOT NULL,
-                TableName NVARCHAR(100) NOT NULL
-                -- Removed: FOREIGN KEY (ConsultantID) REFERENCES Consultant(ConsultantID)
-            );
-        END
-
-        PRINT 'Timesheet database deployed successfully.';
+        -- Log successful deployment
+        INSERT INTO Timesheet.AuditLog (EventType, EventDateTime, Details)
+        VALUES ('Database Deployment', GETDATE(), 'Timesheet database deployed successfully.');
     END TRY
     BEGIN CATCH
-        DECLARE @ErrorMessage NVARCHAR(MAX) = ERROR_MESSAGE();
-        DECLARE @ErrorDate DATETIME = GETDATE();
-        DECLARE @TableName NVARCHAR(100) = 'Unknown';
+        -- Log error
+        INSERT INTO Timesheet.ErrorLog (ErrorMessage, ErrorDateTime, StackTrace)
+        VALUES (
+            ERROR_MESSAGE(),
+            GETDATE(),
+            'Procedure: DeployTimesheetDatabase, Line: ' + CAST(ERROR_LINE() AS NVARCHAR(10))
+        );
 
-        -- Insert into ErrorLog if the table exists, otherwise print error
-        IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ErrorLog]') AND type in (N'U'))
-        BEGIN
-            INSERT INTO ErrorLog (ErrorDate, ErrorMessage, TableName)
-            VALUES (@ErrorDate, @ErrorMessage, @TableName);
-        END
-        ELSE
-        BEGIN
-            PRINT 'Error: ' + @ErrorMessage;
-        END
-        
-        THROW;
+        -- Throw the error with proper syntax
+        THROW 50001, 'Failed to deploy Timesheet database. Check ErrorLog for details.', 1;
     END CATCH
 END;
 GO
 
--- Execute the stored procedure to deploy the database
+-- Execute the procedure
 EXEC DeployTimesheetDatabase;
 GO
