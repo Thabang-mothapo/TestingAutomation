@@ -20,26 +20,38 @@ jobs:
           choco install sqlserver-cmdlineutils -y --no-progress
         shell: powershell
 
+      # Debug environment variables
+      - name: Debug Environment Variables
+        env:
+          SQL_SERVER: ${{ secrets.Timesheet_SQL_SERVER_PUBLIC_URL }}
+          SQL_USER: ${{ secrets.Timesheet_SQL_USER }}
+          SQL_DATABASE: ${{ secrets.Timesheet_SQL_DATABASE }}
+        run: |
+          Write-Output "SQL_SERVER: $env:SQL_SERVER"
+          Write-Output "SQL_USER: $env:SQL_USER"
+          Write-Output "SQL_DATABASE: $env:SQL_DATABASE"
+        shell: powershell
+
       # Check SQL Server version
       - name: Check SQL Server Connection
         env:
-          SQL_SERVER: ${{ secrets.TimesheetDB_SQL_SERVER_PUBLIC_URL }}
-          SQL_USER: ${{ secrets.TimesheetDB_SQL_USER }}
-          SQL_PASSWORD: ${{ secrets.TimesheetDB_SQL_PASSWORD }}
-          SQL_DATABASE: ${{ secrets.TimesheetDB_SQL_DATABASE }}
+          SQL_SERVER: ${{ secrets.Timesheet_SQL_SERVER_PUBLIC_URL }}
+          SQL_USER: ${{ secrets.Timesheet_SQL_USER }}
+          SQL_PASSWORD: ${{ secrets.Timesheet_SQL_PASSWORD }}
+          SQL_DATABASE: ${{ secrets.Timesheet_SQL_DATABASE }}
         run: |
           sqlcmd -S $env:SQL_SERVER -U $env:SQL_USER -P $env:SQL_PASSWORD -d $env:SQL_DATABASE -Q "SELECT @@VERSION;" -o sql_version.txt
           Get-Content sql_version.txt
         shell: powershell
 
-      # Execute SQL script to deploy TimesheetDB with error logging
+      # Execute SQL script to deploy TimesheetD
       - name: Deploy Database
         env:
-          SQL_SERVER: ${{ secrets.TimesheetDB_SQL_SERVER_PUBLIC_URL }}
-          SQL_USER: ${{ secrets.TimesheetDB_SQL_USER }}
-          SQL_PASSWORD: ${{ secrets.TimesheetDB_SQL_PASSWORD }}
-          SQL_DATABASE: ${{ secrets.TimesheetDB_SQL_DATABASE }}
+          SQL_SERVER: ${{ secrets.Timesheet_SQL_SERVER_PUBLIC_URL }}
+          SQL_USER: ${{ secrets.Timesheet_SQL_USER }}
+          SQL_PASSWORD: ${{ secrets.Timesheet_SQL_PASSWORD }}
+          SQL_DATABASE: ${{ secrets.Timesheet_SQL_DATABASE }}
         run: |
-          sqlcmd -S $env:SQL_SERVER -U $env:SQL_USER -P $env:SQL_PASSWORD -d $env:SQL_DATABASE -i deploy_timesheet.sql -o deploy_output.txt
+          sqlcmd -S $env:SQL_SERVER -U $env:SQL_USER -P $env:SQL_PASSWORD -d $env:SQL_DATABASE -t 60 -i deploy_timesheet.sql -o deploy_output.txt
           Get-Content deploy_output.txt
         shell: powershell
