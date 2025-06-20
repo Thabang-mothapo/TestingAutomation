@@ -1,46 +1,25 @@
-name: Timesheet SSIS Deployment
-
+name: Deploy Jobs
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
 jobs:
-  validate-and-deploy:
-    runs-on: windows-latest # SSIS requires Windows runner
+  build-and-deploy:
+    runs-on: ubuntu-latest
     steps:
-      # Checkout repository to access SQL scripts and SSIS packages
-      - name: Checkout Repository
-        uses: actions/checkout@v4 # Latest version as of June 2025
-
-      # Install SQL Server command-line tools (sqlcmd)
-      - name: Install sqlcmd
-        run: |
-          choco install sqlserver-cmdlineutils -y
-        env:
-          ChocolateyInstall: C:\ProgramData\chocolatey
-
-      # Validate SQL scripts (Create_TimesheetDB.sql, Create_Tables.sql)
-      - name: Validate SQL Scripts
-  run: |
-    sqlcmd -S $env:SQL_SERVER -U $env:SQL_USERNAME -P $env:SQL_PASSWORD -i SQL_Script/SQL.sql
-  env:
-    SQL_SERVER: ${{ secrets.SQL_SERVER }}
-    SQL_USERNAME: ${{ secrets.SQL_USERNAME }}
-    SQL_PASSWORD: ${{ secrets.SQL_PASSWORD }}
-
-
-      # Deploy SSIS packages (example using dtexec; adjust for ispac deployment)
-       - name: Deploy SSIS Packages
-        run: |
-          # Example: Copy ispac to server or deploy using SSISDB tools
-          # Requires SSIS tools installed on runner
-          # Placeholder: Deploy MainWorkflow.dtsx and DataWorkflow.dtsx
-          echo "Deploying SSIS packages (configure actual deployment here)"
-        # Note: Actual deployment may require Visual Studio or SSISDB APIs
-
-      # Deploy SQL Agent Job
-      - name: Deploy SQL Agent Job
-        run: |
-          sqlcmd -S ${{ secrets.SQL_SERVER }} -U ${{ secrets.SQL_USERNAME }} -P ${{ secrets.SQL_PASSWORD }} -i sql/Create_SQLAgent_Job.sql
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    - name: Install dependencies
+      run: npm install
+    - name: Run tests
+      run: npm test
+    - name: Build
+      run: npm run build
+    - name: Deploy to server
+      env:
+        DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+      run: |
+        ssh -o StrictHostKeyChecking=no user@server "deploy-script.sh"
