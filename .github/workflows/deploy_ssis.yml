@@ -5,11 +5,12 @@ on:
     branches:
       - main
     paths:
-      - 'SSISProject/**'  # Trigger on changes to SSIS project files
+      - 'SSISProject/**'
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
-    runs-on: [self-hosted, ssis-runner]  # Use self-hosted runner with label 'ssis-runner'
+    runs-on: [self-hosted, ssis-runner]  # Self-hosted runner with SSIS tools
     environment: production
 
     steps:
@@ -17,18 +18,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: Install SSIS DevOps Tools
+      # Step 2: Setup SSIS DevOps Tools (assumes tools are already installed or added via PATH)
       - name: Setup SSIS DevOps Tools
         uses: jonlabelle/setup-ssis-devops-tools@v1
 
-      # Step 3: Build SSIS project
+      # Step 3: Build SSIS Project
       - name: Build SSIS Project
         run: |
-          SSISBuild.exe -p:${{ github.workspace }}\SSISProject\MySSISProject.dtproj -o:${{ github.workspace }}\SSISBuild
+          SSISBuild.exe -p:"${{ github.workspace }}\\SSISProject\\MySSISProject.dtproj" -o:"${{ github.workspace }}\\SSISBuild"
         shell: cmd
 
       # Step 4: Deploy SSIS package to SSISDB
       - name: Deploy SSIS Package
         run: |
-          SSISDeploy.exe -s:${{ github.workspace }}\SSISBuild\MySSISProject.ispac -d:"catalog;/SSISDB/MyFolder/MyProject;MyServerName" -at:winAuth
+          SSISDeploy.exe -s:"${{ github.workspace }}\\SSISBuild\\MySSISProject.ispac" -d:"catalog;/SSISDB/MyFolder/MyProject;MyServerName" -at:winAuth
         shell: cmd
