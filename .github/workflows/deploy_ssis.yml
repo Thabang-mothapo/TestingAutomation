@@ -1,4 +1,4 @@
-name: Build and Deploy SSIS Package
+name: Deploy SSIS Package
 
 on:
   push:
