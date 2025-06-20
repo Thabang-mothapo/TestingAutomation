@@ -18,4 +18,4 @@ jobs:
           sql_user: ${{ secrets.DEV_SQL_USER }}
           sql_password: ${{ secrets.DEV_SQL_PASSWORD }}
           db_script: 'create_db_and_table.sql'
-          proc_script: 'create_stored_procedure.sql'
+         
