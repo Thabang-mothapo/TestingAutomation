@@ -18,22 +18,26 @@ jobs:
           # Install prerequisites
           sudo apt-get update
           sudo apt-get install -y curl apt-transport-https gnupg
-
           # Add Microsoft repository GPG key non-interactively
           curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --batch --yes --dearmor -o /usr/share/keyrings/microsoft-prod.gpg
-
           # Add Microsoft repository for Ubuntu 24.04
           curl -fsSL https://packages.microsoft.com/config/ubuntu/24.04/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
-
           # Update package lists
           sudo apt-get update
-
           # Install mssql-tools18 and unixodbc-dev
           sudo ACCEPT_EULA=Y apt-get install -y mssql-tools18 unixodbc-dev
-
           # Add mssql-tools to PATH
           echo 'export PATH="$PATH:/opt/mssql-tools18/bin"' >> ~/.bashrc
           source ~/.bashrc
+
+      - name: Test SQL Server Connection
+        env:
+          SQL_SERVER: ${{ secrets.SQL_SERVER }}
+          SQL_USERNAME: ${{ secrets.SQL_USERNAME }}
+          SQL_PASSWORD: ${{ secrets.SQL_PASSWORD }}
+          SQL_DATABASE: ${{ secrets.SQL_DATABASE }}
+        run: |
+          /opt/mssql-tools18/bin/sqlcmd -S $SQL_SERVER -U $SQL_USERNAME -P $SQL_PASSWORD -d $SQL_DATABASE -Q "SELECT @@VERSION"
 
       - name: Deploy Timesheet Database
         env:
