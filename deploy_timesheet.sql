@@ -17,7 +17,7 @@ BEGIN
         -- Create Timesheet database if it doesn't exist
         IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'Timesheet')
         BEGIN
-            CREATE DATABASE TimesheetDB;
+            CREATE DATABASE Timesheet;
         END
 
         -- Use dynamic SQL to create tables in Timesheet database
@@ -49,20 +49,27 @@ BEGIN
         EXEC sp_executesql @SQL;
 
         -- Log successful deployment
-        INSERT INTO dbo.AuditLog (EventType, EventDateTime, Details)
+        INSERT INTO Timesheet.dbo.AuditLog (EventType, EventDateTime, Details)
         VALUES ('Database Deployment', GETDATE(), 'Timesheet database deployed successfully.');
     END TRY
     BEGIN CATCH
-        -- Log error
-        INSERT INTO dbo.ErrorLog (ErrorMessage, ErrorDateTime, StackTrace)
-        VALUES (
-            ERROR_MESSAGE(),
-            GETDATE(),
-            'Procedure: DeployTimesheetDatabase, Line: ' + CAST(ERROR_LINE() AS NVARCHAR(10))
-        );
+        -- Log error in Timesheet database
+        DECLARE @ErrorSQL NVARCHAR(MAX);
+        SET @ErrorSQL = N'
+            INSERT INTO Timesheet.dbo.ErrorLog (ErrorMessage, ErrorDateTime, StackTrace)
+            VALUES (
+                @ErrorMsg,
+                GETDATE(),
+                @StackTrace
+            );
+        ';
+        EXEC sp_executesql @ErrorSQL,
+            N'@ErrorMsg NVARCHAR(500), @StackTrace NVARCHAR(MAX)',
+            @ErrorMsg = ERROR_MESSAGE(),
+            @StackTrace = 'Procedure: DeployTimesheetDatabase, Line: ' + CAST(ERROR_LINE() AS NVARCHAR(10));
 
-        -- Throw the error with proper syntax
-        THROW 50001, 'Failed to deploy Timesheet database. Check ErrorLog for details.', 1;
+        -- Throw the error
+        THROW 50001, 'Failed to deploy Timesheet database. Check Timesheet.dbo.ErrorLog for details.', 1;
     END CATCH
 END;
 GO
