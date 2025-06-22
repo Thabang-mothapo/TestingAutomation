@@ -54,7 +54,7 @@ BEGIN
     END TRY
     BEGIN CATCH
         -- Log error
-        INSERT INTO Timesheet.ErrorLog (ErrorMessage, ErrorDateTime, StackTrace)
+        INSERT INTO dbo.ErrorLog (ErrorMessage, ErrorDateTime, StackTrace)
         VALUES (
             ERROR_MESSAGE(),
             GETDATE(),
