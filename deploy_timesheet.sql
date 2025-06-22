@@ -49,7 +49,7 @@ BEGIN
         EXEC sp_executesql @SQL;
 
         -- Log successful deployment
-        INSERT INTO Timesheet.AuditLog (EventType, EventDateTime, Details)
+        INSERT INTO dbo.AuditLog (EventType, EventDateTime, Details)
         VALUES ('Database Deployment', GETDATE(), 'Timesheet database deployed successfully.');
     END TRY
     BEGIN CATCH
