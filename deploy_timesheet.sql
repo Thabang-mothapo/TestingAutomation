@@ -8,7 +8,7 @@ IF OBJECT_ID('DeployTimesheetDatabase', 'P') IS NOT NULL
 GO
 
 -- Create the DeployTimesheetDatabase stored procedure
-CREATE PROCEDURE DeployTimesheetDBDatabase
+CREATE PROCEDURE DeployTimesheetDatabase
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -68,5 +68,5 @@ END;
 GO
 
 -- Execute the procedure
-EXEC DeployTimesheetDBDatabase;
+EXEC DeployTimesheetDatabase;
 GO
