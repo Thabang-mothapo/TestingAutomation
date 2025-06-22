@@ -74,8 +74,8 @@ BEGIN
             PRINT 'Failed to log error to Timesheet.dbo.ErrorLog: ' + ERROR_MESSAGE();
         END CATCH
 
-        -- Throw the original error
-        THROW 50001, 'Failed to deploy Timesheet database. Check Timesheet.dbo.ErrorLog for details.', 1;
+        -- Raise the error (compatible with SQL Server 2008 and later)
+        RAISERROR ('Failed to deploy Timesheet database. Check Timesheet.dbo.ErrorLog for details.', 16, 1);
     END CATCH
 END;
 GO
