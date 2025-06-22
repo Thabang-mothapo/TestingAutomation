@@ -2,7 +2,7 @@
 USE master;
 GO
 
--- Drop the procedure if it exists to avoid Msg 2714
+-- Drop the procedure if it exists to avoid conflicts
 IF OBJECT_ID('DeployTimesheetDatabase', 'P') IS NOT NULL
     DROP PROCEDURE DeployTimesheetDatabase;
 GO
@@ -48,27 +48,33 @@ BEGIN
         ';
         EXEC sp_executesql @SQL;
 
-        -- Log successful deployment
-        INSERT INTO Timesheet.dbo.AuditLog (EventType, EventDateTime, Details)
-        VALUES ('Database Deployment', GETDATE(), 'Timesheet database deployed successfully.');
+        -- Log successful deployment in Timesheet.dbo.AuditLog
+        SET @SQL = N'
+            INSERT INTO Timesheet.dbo.AuditLog (EventType, EventDateTime, Details)
+            VALUES (''Database Deployment'', GETDATE(), ''Timesheet database deployed successfully.'');
+        ';
+        EXEC sp_executesql @SQL;
     END TRY
     BEGIN CATCH
-        -- Log error in Timesheet database
+        -- Log error in Timesheet.dbo.ErrorLog using dynamic SQL
         DECLARE @ErrorSQL NVARCHAR(MAX);
+        DECLARE @ErrorMsg NVARCHAR(500) = ERROR_MESSAGE();
+        DECLARE @StackTrace NVARCHAR(MAX) = 'Procedure: DeployTimesheetDatabase, Line: ' + CAST(ERROR_LINE() AS NVARCHAR(10));
         SET @ErrorSQL = N'
             INSERT INTO Timesheet.dbo.ErrorLog (ErrorMessage, ErrorDateTime, StackTrace)
-            VALUES (
-                @ErrorMsg,
-                GETDATE(),
-                @StackTrace
-            );
+            VALUES (@ErrorMsg, GETDATE(), @StackTrace);
         ';
-        EXEC sp_executesql @ErrorSQL,
-            N'@ErrorMsg NVARCHAR(500), @StackTrace NVARCHAR(MAX)',
-            @ErrorMsg = ERROR_MESSAGE(),
-            @StackTrace = 'Procedure: DeployTimesheetDatabase, Line: ' + CAST(ERROR_LINE() AS NVARCHAR(10));
+        BEGIN TRY
+            EXEC sp_executesql @ErrorSQL,
+                N'@ErrorMsg NVARCHAR(500), @StackTrace NVARCHAR(MAX)',
+                @ErrorMsg, @StackTrace;
+        END TRY
+        BEGIN CATCH
+            -- If error logging fails, print the error for debugging
+            PRINT 'Failed to log error to Timesheet.dbo.ErrorLog: ' + ERROR_MESSAGE();
+        END CATCH
 
-        -- Throw the error
+        -- Throw the original error
         THROW 50001, 'Failed to deploy Timesheet database. Check Timesheet.dbo.ErrorLog for details.', 1;
     END CATCH
 END;
