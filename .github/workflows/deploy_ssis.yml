@@ -38,7 +38,7 @@ jobs:
       - name: Verify SSIS project file exists
         shell: powershell
         run: |
-         $projectFile = Join-Path $env:GITHUB_WORKSPACE "HandsOnProject\Timesheets\ProjectPackages\TimesheetMigrationnew.dtproj"
+         $projectFile = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE, "HandsOnProject", "Timesheets", "ProjectPackages", "TimesheetMigrationnew.dtproj")
           if (-not (Test-Path "$projectFile")) {
             Write-Error "SSIS project file not found at: $projectFile"
             exit 1
