@@ -49,7 +49,7 @@ jobs:
       - name: Verify SSIS project file exists
         shell: powershell
         run: |
-          $projectFile = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE, "HandsOnProject", "Timesheets", "TimesheetMigrationnew.dtproj")
+          $projectFile = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE, "HandsOnProject", "Timesheet", "TimesheetMigrationnew.dtproj")
           Write-Output "GITHUB_WORKSPACE: $env:GITHUB_WORKSPACE"
           Write-Output "Checking for SSIS project file at: $projectFile"
           if (-not (Test-Path "$projectFile")) {
@@ -85,7 +85,7 @@ jobs:
       - name: Build SSIS Project
         shell: powershell
         run: |
-          $projectFile = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE, "HandsOnProject", "Timesheets", "ProjectPackages", "TimesheetMigrationnew.dtproj")
+          $projectFile = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE, "HandsOnProject", "Timesheet", "TimesheetMigrationnew.dtproj")
           $outputDir = "${{ runner.temp }}\SSISOutput"
           $config = "Development"
           Write-Output "Building SSIS project at: $projectFile"
