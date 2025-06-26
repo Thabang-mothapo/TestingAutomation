@@ -1,6 +1,9 @@
-Create database Timesheet
+Create database TimesheetDB
 GO
 
+USE TimesheetDB
+GO
+    
 CREATE TABLE Consultant (
     ConsultantID INT PRIMARY KEY IDENTITY(1,1),
     ConsultantName NVARCHAR(100) NOT NULL
