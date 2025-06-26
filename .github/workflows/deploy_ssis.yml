@@ -10,20 +10,30 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history
+          submodules: true  # Include submodules if applicable
+          lfs: true  # Include Git LFS files if applicable
 
       - name: Debug workspace and user
         shell: powershell
         run: |
           Write-Output "Workspace path: ${{ github.workspace }}"
           Write-Output "Current user: $env:USERDOMAIN\$env:USERNAME"
+          Write-Output "Directory tree of workspace:"
+          tree "${{ github.workspace }}" /F
+          Write-Output "Listing all files recursively:"
           Get-ChildItem -Path "${{ github.workspace }}" -Recurse
 
       - name: List all .dtproj files under workspace
         shell: powershell
         run: |
           Write-Output "Searching for .dtproj files..."
-          Get-ChildItem -Path "${{ github.workspace }}" -Filter *.dtproj -Recurse | ForEach-Object {
-            Write-Output $_.FullName
+          $dtprojFiles = Get-ChildItem -Path "${{ github.workspace }}" -Filter *.dtproj -Recurse
+          if ($dtprojFiles) {
+            $dtprojFiles | ForEach-Object { Write-Output $_.FullName }
+          } else {
+            Write-Output "No .dtproj files found in workspace."
           }
 
       - name: List all .ispac files under temp directory
@@ -31,16 +41,28 @@ jobs:
         run: |
           Write-Output "Searching for .ispac files in runner temp directory..."
           $tempDir = "${{ runner.temp }}"
-          Get-ChildItem -Path $tempDir -Filter *.ispac -Recurse | ForEach-Object {
-            Write-Output $_.FullName
+          $ispacFiles = Get-ChildItem -Path $tempDir -Filter *.ispac -Recurse
+          if ($ispacFiles) {
+            $ispacFiles | ForEach-Object { Write-Output $_.FullName }
+          } else {
+            Write-Output "No .ispac files found in temp directory."
           }
 
       - name: Verify SSIS project file exists
         shell: powershell
         run: |
-         $projectFile = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE, "HandsOnProject", "Timesheets", "ProjectPackages", "TimesheetMigrationnew.dtproj")
+          $projectFile = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE, "TestingAutomation", "HandsOnProject", "Timesheets", "ProjectPackages", "TimesheetMigrationnew.dtproj")
+          Write-Output "GITHUB_WORKSPACE: $env:GITHUB_WORKSPACE"
+          Write-Output "Checking for SSIS project file at: $projectFile"
           if (-not (Test-Path "$projectFile")) {
             Write-Error "SSIS project file not found at: $projectFile"
+            Write-Output "Listing all .dtproj files in workspace for debugging:"
+            $dtprojFiles = Get-ChildItem -Path "$env:GITHUB_WORKSPACE" -Filter *.dtproj -Recurse
+            if ($dtprojFiles) {
+              $dtprojFiles | ForEach-Object { Write-Output $_.FullName }
+            } else {
+              Write-Output "No .dtproj files found in workspace."
+            }
             exit 1
           }
           Write-Output "Found SSIS project file at $projectFile"
@@ -65,9 +87,10 @@ jobs:
       - name: Build SSIS Project
         shell: powershell
         run: |
-          $projectFile = "${{ github.workspace }}\HandsOnProject\Timesheets\ProjectPackages\TimesheetMigrationnew.dtproj"
+          $projectFile = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE, "TestingAutomation", "HandsOnProject", "Timesheets", "ProjectPackages", "TimesheetMigrationnew.dtproj")
           $outputDir = "${{ runner.temp }}\SSISOutput"
           $config = "Development"
+          Write-Output "Building SSIS project at: $projectFile"
           if (-not (Test-Path $outputDir)) {
             New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
           }
@@ -87,8 +110,11 @@ jobs:
           $catalogDB = "SSISDB"
           $folderName = "TimesheetMigrationnew"
           $projectName = "TimesheetMigrationnew"
-          Add-Type -AssemblyName System.Data
           Write-Output "Reading .ispac file from $ispacPath"
+          if (-not (Test-Path $ispacPath)) {
+            Write-Error ".ispac file not found at: $ispacPath"
+            exit 1
+          }
           $projectBytes = [System.IO.File]::ReadAllBytes($ispacPath)
           $connString = "Data Source=$sqlServer;Initial Catalog=$catalogDB;Integrated Security=SSPI;"
           $conn = New-Object System.Data.SqlClient.SqlConnection $connString
@@ -96,7 +122,7 @@ jobs:
           $cmd = $conn.CreateCommand()
           $cmd.CommandText = "[catalog].[deploy_project]"
           $cmd.CommandType = [System.Data.CommandType]::StoredProcedure
-          $p1 = $cmd.Parameters.Add("@folder_name", [System.Data.SqlDbType]::NVarChar, 128)
+          $p Lehman = $cmd.Parameters.Add("@folder_name", [System.Data.SqlDbType]::NVarChar, 128)
           $p1.Value = $folderName
           $p2 = $cmd.Parameters.Add("@project_name", [System.Data.SqlDbType]::NVarChar, 128)
           $p2.Value = $projectName
@@ -111,6 +137,6 @@ jobs:
             Write-Error "Deployment failed: $_"
             exit 1
           }
-          finally {
+          finally2 {
             $conn.Close()
           }
