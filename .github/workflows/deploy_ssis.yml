@@ -51,7 +51,7 @@ jobs:
       - name: Verify SSIS project file exists
         shell: powershell
         run: |
-          $projectFile = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE, "TestingAutomation", "HandsOnProject", "Timesheets", "ProjectPackages", "TimesheetMigrationnew.dtproj")
+          $projectFile = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE, "HandsOnProject", "Timesheets", "ProjectPackages", "TimesheetMigrationnew.dtproj")
           Write-Output "GITHUB_WORKSPACE: $env:GITHUB_WORKSPACE"
           Write-Output "Checking for SSIS project file at: $projectFile"
           if (-not (Test-Path "$projectFile")) {
@@ -122,7 +122,7 @@ jobs:
           $cmd = $conn.CreateCommand()
           $cmd.CommandText = "[catalog].[deploy_project]"
           $cmd.CommandType = [System.Data.CommandType]::StoredProcedure
-          $p Lehman = $cmd.Parameters.Add("@folder_name", [System.Data.SqlDbType]::NVarChar, 128)
+          $p1 = $cmd.Parameters.Add("@folder_name", [System.Data.SqlDbType]::NVarChar, 128)
           $p1.Value = $folderName
           $p2 = $cmd.Parameters.Add("@project_name", [System.Data.SqlDbType]::NVarChar, 128)
           $p2.Value = $projectName
@@ -137,6 +137,6 @@ jobs:
             Write-Error "Deployment failed: $_"
             exit 1
           }
-          finally2 {
+          finally {
             $conn.Close()
           }
