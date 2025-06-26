@@ -87,7 +87,7 @@ jobs:
       - name: Build SSIS Project
         shell: powershell
         run: |
-          $projectFile = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE, "TestingAutomation", "HandsOnProject", "Timesheets", "ProjectPackages", "TimesheetMigrationnew.dtproj")
+          $projectFile = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE, "HandsOnProject", "Timesheets", "ProjectPackages", "TimesheetMigrationnew.dtproj")
           $outputDir = "${{ runner.temp }}\SSISOutput"
           $config = "Development"
           Write-Output "Building SSIS project at: $projectFile"
