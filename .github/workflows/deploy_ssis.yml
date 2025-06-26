@@ -1,35 +1,116 @@
-name: Deploy SSIS Package
+name: Deploy SSIS Packages to SQL Server
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'SSISProject/**'
   workflow_dispatch:
 
 jobs:
-  build-and-deploy:
-    runs-on: [self-hosted, ssis-runner]  # Self-hosted runner with SSIS tools
-    environment: production
+  deploy-ssis:
+    runs-on: self-hosted
 
     steps:
-      # Step 1: Checkout the repository
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      # Step 2: Setup SSIS DevOps Tools (assumes tools are already installed or added via PATH)
-      - name: Setup SSIS DevOps Tools
-        uses: jonlabelle/setup-ssis-devops-tools@v1
+      - name: Debug workspace and user
+        shell: powershell
+        run: |
+          Write-Output "Workspace path: ${{ github.workspace }}"
+          Write-Output "Current user: $env:USERDOMAIN\$env:USERNAME"
+          Get-ChildItem -Path "${{ github.workspace }}" -Recurse
 
-      # Step 3: Build SSIS Project
+      - name: List all .dtproj files under workspace
+        shell: powershell
+        run: |
+          Write-Output "Searching for .dtproj files..."
+          Get-ChildItem -Path "${{ github.workspace }}" -Filter *.dtproj -Recurse | ForEach-Object {
+            Write-Output $_.FullName
+          }
+
+      - name: List all .ispac files under temp directory
+        shell: powershell
+        run: |
+          Write-Output "Searching for .ispac files in runner temp directory..."
+          $tempDir = "${{ runner.temp }}"
+          Get-ChildItem -Path $tempDir -Filter *.ispac -Recurse | ForEach-Object {
+            Write-Output $_.FullName
+          }
+
+      - name: Verify SSIS project file exists
+        shell: powershell
+        run: |
+          $projectFile = "${{ github.workspace }}\HandsOnProject\Timesheets\ProjectPackages\TimesheetMigrationnew.dtproj"
+          if (-not (Test-Path "$projectFile")) {
+            Write-Error "SSIS project file not found at: $projectFile"
+            exit 1
+          }
+          Write-Output "Found SSIS project file at $projectFile"
+
+      - name: Verify SSIS build tools exist
+        shell: powershell
+        run: |
+          if (-not (Test-Path "C:\SSISDevOpsTools\SSISBuild.exe")) {
+            Write-Error "SSISBuild.exe not found in C:\SSISDevOpsTools"
+            exit 1
+          }
+          if (-not (Test-Path "C:\Program Files\Microsoft SQL Server\160\DTS\Binn\ISDeploymentWizard.exe")) {
+            Write-Error "ISDeploymentWizard.exe not found"
+            exit 1
+          }
+          if (-not (Get-Command sqlcmd.exe -ErrorAction SilentlyContinue)) {
+            Write-Error "sqlcmd.exe not found"
+            exit 1
+          }
+          Write-Output "All required tools found."
+
       - name: Build SSIS Project
+        shell: powershell
         run: |
-          SSISBuild.exe -p:"${{ github.workspace }}\\SSISProject\\MySSISProject.dtproj" -o:"${{ github.workspace }}\\SSISBuild"
-        shell: cmd
+          $projectFile = "${{ github.workspace }}\HandsOnProject\Timesheets\ProjectPackages\TimesheetMigrationnew.dtproj"
+          $outputDir = "${{ runner.temp }}\SSISOutput"
+          $config = "Development"
+          if (-not (Test-Path $outputDir)) {
+            New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+          }
+          & "C:\SSISDevOpsTools\SSISBuild.exe" -p:"$projectFile" -o:"$outputDir" -c:"$config" -l:DIAG
+          $ispacPath = Join-Path $outputDir "$config\TimesheetMigrationnew.ispac"
+          if (-not (Test-Path $ispacPath)) {
+            Write-Error "Build failed: .ispac file not found at $ispacPath"
+            exit 1
+          }
+          Write-Output "Build succeeded: $ispacPath"
 
-      # Step 4: Deploy SSIS package to SSISDB
-      - name: Deploy SSIS Package
+      - name: Deploy SSIS Project via stored procedure
+        shell: powershell
         run: |
-          SSISDeploy.exe -s:"${{ github.workspace }}\\SSISBuild\\MySSISProject.ispac" -d:"catalog;/SSISDB/MyFolder/MyProject;MyServerName" -at:winAuth
-        shell: cmd
+          $ispacPath = "${{ runner.temp }}\SSISOutput\Development\TimesheetMigrationnew.ispac"
+          $sqlServer = "SAMBE202519"
+          $catalogDB = "SSISDB"
+          $folderName = "TimesheetMigrationnew"
+          $projectName = "TimesheetMigrationnew"
+          Add-Type -AssemblyName System.Data
+          Write-Output "Reading .ispac file from $ispacPath"
+          $projectBytes = [System.IO.File]::ReadAllBytes($ispacPath)
+          $connString = "Data Source=$sqlServer;Initial Catalog=$catalogDB;Integrated Security=SSPI;"
+          $conn = New-Object System.Data.SqlClient.SqlConnection $connString
+          $conn.Open()
+          $cmd = $conn.CreateCommand()
+          $cmd.CommandText = "[catalog].[deploy_project]"
+          $cmd.CommandType = [System.Data.CommandType]::StoredProcedure
+          $p1 = $cmd.Parameters.Add("@folder_name", [System.Data.SqlDbType]::NVarChar, 128)
+          $p1.Value = $folderName
+          $p2 = $cmd.Parameters.Add("@project_name", [System.Data.SqlDbType]::NVarChar, 128)
+          $p2.Value = $projectName
+          $p3 = $cmd.Parameters.Add("@project_stream", [System.Data.SqlDbType]::VarBinary, -1)
+          $p3.Value = $projectBytes
+          try {
+            Write-Output "Deploying project..."
+            $cmd.ExecuteNonQuery() | Out-Null
+            Write-Output "Deployment succeeded!"
+          }
+          catch {
+            Write-Error "Deployment failed: $_"
+            exit 1
+          }
+          finally {
+            $conn.Close()
+          }
