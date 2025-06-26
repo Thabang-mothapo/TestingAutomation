@@ -37,8 +37,7 @@ jobs:
           SQL_PASSWORD: ${{ secrets.SQL_PASSWORD }}
           SQL_DATABASE: ${{ secrets.SQL_DATABASE }}
         run: |
-          /opt/mssql-tools18/bin/sqlcmd -S $SQL_SERVER -U $SQL_USERNAME -P $SQL_PASSWORD -d $SQL_DATABASE -N -C -t 60 -i deploy_timesheet.sql
-
+          /opt/mssql-tools18/bin/sqlcmd -S $SQL_SERVER -U $SQL_USERNAME -P $SQL_PASSWORD -d $SQL_DATABASE -N -C -t 60 -i create_db_and_table.sql
       - name: Deploy Timesheet Database
         env:
           SQL_SERVER: ${{ secrets.SQL_SERVER }}
@@ -46,4 +45,4 @@ jobs:
           SQL_PASSWORD: ${{ secrets.SQL_PASSWORD }}
           SQL_DATABASE: ${{ secrets.SQL_DATABASE }}
         run: |
-          /opt/mssql-tools18/bin/sqlcmd -S $SQL_SERVER -U $SQL_USERNAME -P $SQL_PASSWORD -d $SQL_DATABASE -N -C -t 60 -i deploy_timesheet.sql
+          /opt/mssql-tools18/bin/sqlcmd -S $SQL_SERVER -U $SQL_USERNAME -P $SQL_PASSWORD -d $SQL_DATABASE -N -C -t 60 -i create_db_and_table.sql
