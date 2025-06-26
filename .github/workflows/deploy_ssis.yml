@@ -26,15 +26,13 @@ jobs:
           Get-ChildItem -Path "${{ github.workspace }}" -Recurse
 
       - name: List all .dtproj files under workspace
-        shell: powershell
-        run: |
-          Write-Output "Searching for .dtproj files..."
-          $dtprojFiles = Get-ChildItem -Path "${{ github.workspace }}" -Filter *.dtproj -Recurse
-          if ($dtprojFiles) {
-            $dtprojFiles | ForEach-Object { Write-Output $_.FullName }
-          } else {
-            Write-Output "No .dtproj files found in workspace."
-          }
+  shell: powershell
+  run: |
+    Write-Output "GITHUB_WORKSPACE = $env:GITHUB_WORKSPACE"
+    Write-Output "Searching for .dtproj files under $env:GITHUB_WORKSPACE..."
+    Get-ChildItem -Path "$env:GITHUB_WORKSPACE" -Recurse -Filter *.dtproj | ForEach-Object {
+      Write-Output "✅ Found: $($_.FullName)"
+    }
 
       - name: List all .ispac files under temp directory
         shell: powershell
